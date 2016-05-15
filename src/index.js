@@ -117,7 +117,7 @@
                     // 引号对已匹配成功，设置标志位为false，为下一次引号对匹配做准备
                     needQuot = false;
                     // 如果当前的类型是对象的话，则上述引号对内的值可能是对象的key或value
-                    if (type === 'object') {
+                    if (type === 'Object') {
                         // 如果当前的对象刚开始匹配，或上一个键值对已匹配成功，并也匹配到了不同键值对的分隔符`,`，则引号内的值应该是当前对象的下一个key
                         if (state === State.START || state === State.FOR_NEXT) {
                             key = text;
@@ -138,7 +138,7 @@
                         }
                     }
                     // 如果当前的类型是数组的话，则上述引号对内的值可能是数组的项
-                    else if (type === 'array') {
+                    else if (type === 'Array') {
                         if (state === State.START || state === state.FOR_NEXT) {
                             value = text;
                             // 为当前数组添加项
@@ -181,7 +181,7 @@
                         break;
                     // 匹配到了对象结束
                     case '}':
-                        if (type !== 'object') {
+                        if (type !== 'Object') {
                             // 如果当前上下文target不是对象，但现在匹配到了对象结束符，说明是错误的格式
                             error();
                         }
@@ -219,7 +219,7 @@
                         break;
                     // 匹配到了数组结束
                     case ']':
-                        if (type !== 'array') {
+                        if (type !== 'Array') {
                             error();
                         }
                         else {
@@ -244,7 +244,7 @@
                         }
                         break;
                     case ':':
-                        if (type === 'object' && state === State.KEY_DONE && isEmpty(text)) {
+                        if (type === 'Object' && state === State.KEY_DONE && isEmpty(text)) {
                             stateStack.update(State.FOR_VALUE);
                         }
                         else {
@@ -252,12 +252,12 @@
                         }
                         break;
                     case ',':
-                        if (type === 'object' || type === 'array') {
-                            if (type === 'object' && state === State.FOR_VALUE
-                                || type === 'array' && (state === State.START || state === State.FOR_NEXT)
+                        if (type === 'Object' || type === 'Array') {
+                            if (type === 'Object' && state === State.FOR_VALUE
+                                || type === 'Array' && (state === State.START || state === State.FOR_NEXT)
                             ) {
                                 value = getLiteral(text);
-                                if (typeof value !== 'undefined' || (type === 'array' && State === State.START)) {
+                                if (typeof value !== 'undefined' || (type === 'Array' && State === State.START)) {
                                     addItem();
                                 }
                                 else {
@@ -284,12 +284,12 @@
              */
             function addItem() {
                 if (target) {
-                    if (type === 'object' && state === State.FOR_VALUE) {
+                    if (type === 'Object' && state === State.FOR_VALUE) {
                         target[key] = value;
                         state = State.VALUE_DONE;
                         stateStack.update(State.VALUE_DONE);
                     }
-                    else if (type === 'array' && (state === State.START || state === State.FOR_NEXT)) {
+                    else if (type === 'Array' && (state === State.START || state === State.FOR_NEXT)) {
                         target.push(value);
                         state = State.VALUE_DONE;
                         stateStack.update(State.VALUE_DONE);
@@ -301,7 +301,7 @@
 
                 var valueType = getType(value);
                 // 如果当前的值是对象或数组，则设置context为当前值，接下来匹配的将是当前值的属性或项
-                if (valueType === 'object' || valueType === 'array') {
+                if (valueType === 'Object' || valueType === 'Array') {
                     contextStack.push(value);
                     stateStack.push(State.START);
                 }
@@ -319,14 +319,7 @@
         function getType(target) {
             var match = /\[object (\w+)\]/.exec(Object.prototype.toString.call(target));
             if (match) {
-                switch (match[1]) {
-                    case 'Object':
-                        return 'object';
-                    case 'Array':
-                        return 'array';
-                    default:
-                        return 'other';
-                }
+                return match[1];
             }
         }
 
@@ -375,11 +368,45 @@
         /**
          * 将json对象序列化成字符串
          *
-         * @param {Mixed} target 待序列化的目标对象
+         * @param {Mixed} value 待序列化的目标对象
          * @return {string} 序列化后的字符串
          */
-        function stringify() {
+        function stringify(value) {
+            var result = '';
 
+            switch (getType(value)) {
+                case 'Undefined':
+                    result = undefined;
+                    break;
+                case 'Null':
+                    result = 'null';
+                    break;
+                case 'Number':
+                    result = Number(value).toString();
+                    break;
+                case 'Boolean':
+                    result = Boolean(value).toString();
+                    break;
+                case 'String':
+                    result = '"' + value.replace('"', '\\"') + '"';
+                    break;
+                case 'Object':
+                    var tmp = [];
+                    for (var key in value) {
+                        tmp.push('"' + key + '": ' + stringify(value[key]));
+                    }
+                    result += '{' + tmp.join(', ') + '}';
+                    break;
+                case 'Array':
+                    var tmp = [];
+                    for (var i = 0, len = value.length; i < len; i++) {
+                        tmp.push(stringify(value[i]));
+                    }
+                    result += '[' + tmp.join(', ') + ']';
+                    break;
+            }
+
+            return result;
         }
 
         return {
