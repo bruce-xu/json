@@ -393,7 +393,9 @@
                 case 'Object':
                     var tmp = [];
                     for (var key in value) {
-                        tmp.push('"' + key + '": ' + stringify(value[key]));
+                        if (value.hasOwnProperty(key)) {
+                            tmp.push('"' + key + '": ' + stringify(value[key]));
+                        }
                     }
                     result += '{' + tmp.join(', ') + '}';
                     break;
@@ -404,6 +406,8 @@
                     }
                     result += '[' + tmp.join(', ') + ']';
                     break;
+                default:
+                    result = '"' + value.toString() + '"';
             }
 
             return result;
